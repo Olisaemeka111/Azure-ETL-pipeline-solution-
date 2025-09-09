@@ -60,24 +60,53 @@ This project provides a complete production-ready ETL pipeline solution in Azure
 
 ## Quick Start
 
-1. **Deploy Infrastructure**:
+### Prerequisites
+- Azure CLI installed and configured (`az login`)
+- Terraform >= 1.0
+- Python 3.8+ (for local development)
+- Azure subscription with appropriate permissions
+
+### Deployment Steps
+
+1. **Clone and Setup**:
    ```bash
-   cd terraform
-   terraform init
-   terraform plan
-   terraform apply
+   git clone https://github.com/Olisaemeka111/Azure-ETL-pipeline-solution-.git
+   cd Azure-ETL-pipeline-solution-
    ```
 
-2. **Deploy Data Factory Pipelines**:
+2. **Deploy Infrastructure** (Automated):
    ```bash
-   cd ../scripts
-   ./deploy-adf-pipelines.sh
+   chmod +x scripts/deploy-infrastructure.sh
+   ./scripts/deploy-infrastructure.sh
+   ```
+   This script will:
+   - Create Terraform state storage
+   - Deploy all Azure resources
+   - Configure Key Vault secrets
+   - Generate outputs.json for subsequent deployments
+
+3. **Deploy Data Factory Pipelines**:
+   ```bash
+   chmod +x scripts/deploy-adf-pipelines.sh
+   ./scripts/deploy-adf-pipelines.sh
    ```
 
-3. **Deploy Databricks Notebooks**:
+4. **Deploy Databricks Notebooks**:
    ```bash
-   ./deploy-databricks-notebooks.sh
+   chmod +x scripts/deploy-databricks-notebooks.sh
+   ./scripts/deploy-databricks-notebooks.sh
    ```
+
+### Manual Deployment (Alternative)
+If you prefer manual deployment:
+```bash
+cd terraform
+cp terraform.tfvars.example terraform.tfvars
+# Edit terraform.tfvars with your values
+terraform init
+terraform plan
+terraform apply
+```
 
 ## Security Features
 - ✅ Managed Identities for authentication
@@ -101,11 +130,27 @@ This project provides a complete production-ready ETL pipeline solution in Azure
 - ✅ Cost tracking
 - ✅ Automated alerting
 
-## Prerequisites
-- Azure CLI installed and configured
-- Terraform >= 1.0
-- Python 3.8+ (for local development)
-- Azure subscription with appropriate permissions
+## Deployment Status
+
+### Current Status: 🔄 **In Progress**
+- ✅ **Infrastructure Scripts**: Enhanced with automated state storage creation
+- ✅ **Terraform Configuration**: Fixed region consistency and naming issues
+- ✅ **Git Security**: Comprehensive .gitignore added, sensitive files protected
+- ✅ **GitHub Repository**: All changes committed and pushed
+- 🔄 **Infrastructure Deployment**: Resources being migrated to Central US region
+- ⏳ **Data Factory Pipelines**: Ready for deployment (JSON formatting fixed)
+- ⏳ **Databricks Notebooks**: Ready for deployment
+- ⏳ **End-to-End Testing**: Pending infrastructure completion
+
+### Resource Groups Created:
+- `rg-terraform-state-*` (Central US) - Terraform state storage
+- `etlpipeline-dev-databricks-mrg` (East US) - Databricks managed resources
+
+### Next Steps:
+1. Complete infrastructure deployment in Central US
+2. Deploy Azure Data Factory pipelines
+3. Deploy Databricks notebooks and configure clusters
+4. Test end-to-end ETL pipeline execution
 
 ## Cost Optimization
 - Auto-scaling Databricks clusters
@@ -113,6 +158,45 @@ This project provides a complete production-ready ETL pipeline solution in Azure
 - SQL Database elastic pools
 - Scheduled pipeline execution
 
+## Troubleshooting
+
+### Common Issues
+
+1. **Region Provisioning Issues**:
+   - If SQL Server fails in East US, the deployment automatically uses Central US
+   - All resources are configured for consistent region deployment
+
+2. **Terraform State Issues**:
+   - The deployment script automatically creates state storage
+   - State files are stored securely in Azure Storage
+
+3. **Data Factory JSON Errors**:
+   - Fixed in latest version with separate JSON files for each linked service
+   - Ensure outputs.json exists before running ADF deployment
+
+4. **Permission Issues**:
+   - Ensure you're logged in with `az login`
+   - Verify your account has Contributor access to the subscription
+
+### File Structure
+```
+├── terraform/                 # Infrastructure as Code
+├── adf-pipelines/            # Data Factory configurations
+├── databricks-notebooks/     # Transformation notebooks
+├── monitoring/               # Monitoring configurations
+├── scripts/                  # Deployment automation
+├── docs/                     # Documentation
+└── .gitignore               # Git ignore rules
+```
+
 ## Support
-For questions or issues, please refer to the documentation in the `docs/` directory or create an issue in the repository.
-# Azure-ETL-pipeline-solution-
+- 📖 **Documentation**: See `docs/` directory for detailed guides
+- 🐛 **Issues**: Create an issue in the GitHub repository
+- 🔧 **Deployment Help**: Check the deployment scripts for detailed logging
+- 📧 **Contact**: Repository maintainer for urgent issues
+
+## Repository
+🔗 **GitHub**: https://github.com/Olisaemeka111/Azure-ETL-pipeline-solution-
+
+---
+*Last Updated: September 2024*
