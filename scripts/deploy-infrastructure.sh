@@ -68,7 +68,7 @@ create_terraform_state_storage() {
     print_status "Creating resource group for Terraform state..."
     az group create \
         --name $STATE_RG_NAME \
-        --location "Central US" \
+        --location "West US 2" \
         --output none
     
     # Create storage account for state

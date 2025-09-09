@@ -137,17 +137,17 @@ terraform apply
 - ✅ **Terraform Configuration**: Fixed region consistency and naming issues
 - ✅ **Git Security**: Comprehensive .gitignore added, sensitive files protected
 - ✅ **GitHub Repository**: All changes committed and pushed
-- 🔄 **Infrastructure Deployment**: Resources being migrated to Central US region
+- 🔄 **Infrastructure Deployment**: Resources being deployed consistently in West US 2 region
 - ⏳ **Data Factory Pipelines**: Ready for deployment (JSON formatting fixed)
 - ⏳ **Databricks Notebooks**: Ready for deployment
 - ⏳ **End-to-End Testing**: Pending infrastructure completion
 
-### Resource Groups Created:
-- `rg-terraform-state-*` (Central US) - Terraform state storage
-- `etlpipeline-dev-databricks-mrg` (East US) - Databricks managed resources
+### Resource Groups (All in West US 2):
+- `rg-terraform-state` - Terraform state storage
+- `etlpipeline-dev-rg` - Main ETL resources
 
 ### Next Steps:
-1. Complete infrastructure deployment in Central US
+1. Complete infrastructure deployment in West US 2 (single region)
 2. Deploy Azure Data Factory pipelines
 3. Deploy Databricks notebooks and configure clusters
 4. Test end-to-end ETL pipeline execution
@@ -163,8 +163,8 @@ terraform apply
 ### Common Issues
 
 1. **Region Provisioning Issues**:
-   - If SQL Server fails in East US, the deployment automatically uses Central US
-   - All resources are configured for consistent region deployment
+   - All resources are deployed consistently in West US 2
+   - No cross-region dependencies or data transfer costs
 
 2. **Terraform State Issues**:
    - The deployment script automatically creates state storage
