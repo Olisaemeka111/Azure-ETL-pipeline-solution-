@@ -1,0 +1,310 @@
+{
+  "name": "MainETLPipeline",
+  "properties": {
+    "description": "Main ETL pipeline for data transformation and cleansing",
+    "activities": [
+      {
+        "name": "ValidateInputData",
+        "type": "DataFlow",
+        "dependsOn": [],
+        "policy": {
+          "timeout": "0.12:00:00",
+          "retry": 0,
+          "retryIntervalInSeconds": 30,
+          "secureOutput": false,
+          "secureInput": false
+        },
+        "userProperties": [],
+        "typeProperties": {
+          "dataflow": {
+            "name": "DataValidationFlow",
+            "properties": {
+              "description": "Data validation and profiling flow",
+              "type": "MappingDataFlow",
+              "typeProperties": {
+                "sources": [
+                  {
+                    "name": "RawDataSource",
+                    "dataset": {
+                      "referenceName": "RawDataDataset",
+                      "type": "DatasetReference"
+                    }
+                  }
+                ],
+                "sinks": [
+                  {
+                    "name": "ValidatedDataSink",
+                    "dataset": {
+                      "referenceName": "StagingDataDataset",
+                      "type": "DatasetReference"
+                    }
+                  }
+                ],
+                "transformations": [
+                  {
+                    "name": "SchemaValidation",
+                    "type": "Select",
+                    "description": "Validate and select required columns"
+                  },
+                  {
+                    "name": "DataProfiling",
+                    "type": "Aggregate",
+                    "description": "Generate data quality metrics"
+                  }
+                ]
+              }
+            }
+          },
+          "compute": {
+            "computeType": "General",
+            "coreCount": 8,
+            "timeToLive": 0
+          },
+          "traceLevel": "Fine"
+        }
+      },
+      {
+        "name": "TransformAndCleanseData",
+        "type": "DatabricksNotebook",
+        "dependsOn": [
+          {
+            "activity": "ValidateInputData",
+            "dependencyConditions": [
+              "Succeeded"
+            ]
+          }
+        ],
+        "policy": {
+          "timeout": "0.12:00:00",
+          "retry": 2,
+          "retryIntervalInSeconds": 30,
+          "secureOutput": false,
+          "secureInput": false
+        },
+        "userProperties": [],
+        "typeProperties": {
+          "notebookPath": "/ETL/DataTransformation",
+          "baseParameters": {
+            "storage_account": "@{pipeline().parameters.storageAccount}",
+            "raw_container": "@{pipeline().parameters.rawContainer}",
+            "staging_container": "@{pipeline().parameters.stagingContainer}",
+            "curated_container": "@{pipeline().parameters.curatedContainer}",
+            "processing_date": "@{pipeline().parameters.processingDate}"
+          }
+        },
+        "linkedServiceName": {
+          "referenceName": "AzureDatabricksLinkedService",
+          "type": "LinkedServiceReference"
+        }
+      },
+      {
+        "name": "DataQualityChecks",
+        "type": "DatabricksNotebook",
+        "dependsOn": [
+          {
+            "activity": "TransformAndCleanseData",
+            "dependencyConditions": [
+              "Succeeded"
+            ]
+          }
+        ],
+        "policy": {
+          "timeout": "0.12:00:00",
+          "retry": 1,
+          "retryIntervalInSeconds": 30,
+          "secureOutput": false,
+          "secureInput": false
+        },
+        "userProperties": [],
+        "typeProperties": {
+          "notebookPath": "/ETL/DataQualityChecks",
+          "baseParameters": {
+            "storage_account": "@{pipeline().parameters.storageAccount}",
+            "curated_container": "@{pipeline().parameters.curatedContainer}",
+            "quality_threshold": "@{pipeline().parameters.qualityThreshold}"
+          }
+        },
+        "linkedServiceName": {
+          "referenceName": "AzureDatabricksLinkedService",
+          "type": "LinkedServiceReference"
+        }
+      },
+      {
+        "name": "LoadToSQLDatabase",
+        "type": "Copy",
+        "dependsOn": [
+          {
+            "activity": "DataQualityChecks",
+            "dependencyConditions": [
+              "Succeeded"
+            ]
+          }
+        ],
+        "policy": {
+          "timeout": "0.12:00:00",
+          "retry": 2,
+          "retryIntervalInSeconds": 30,
+          "secureOutput": false,
+          "secureInput": false
+        },
+        "userProperties": [],
+        "typeProperties": {
+          "source": {
+            "type": "ParquetSource",
+            "storeSettings": {
+              "type": "AzureBlobFSReadSettings",
+              "recursive": true,
+              "enablePartitionDiscovery": true
+            }
+          },
+          "sink": {
+            "type": "SqlSink",
+            "writeBehavior": "upsert",
+            "upsertSettings": {
+              "keys": [
+                "id",
+                "processing_date"
+              ]
+            }
+          },
+          "enableStaging": false,
+          "dataIntegrationUnits": 2
+        },
+        "inputs": [
+          {
+            "referenceName": "CuratedDataDataset",
+            "type": "DatasetReference"
+          }
+        ],
+        "outputs": [
+          {
+            "referenceName": "SQLDatabaseDataset",
+            "type": "DatasetReference"
+          }
+        ]
+      },
+      {
+        "name": "SendSuccessNotification",
+        "type": "WebActivity",
+        "dependsOn": [
+          {
+            "activity": "LoadToSQLDatabase",
+            "dependencyConditions": [
+              "Succeeded"
+            ]
+          }
+        ],
+        "policy": {
+          "timeout": "0.12:00:00",
+          "retry": 0,
+          "retryIntervalInSeconds": 30,
+          "secureOutput": false,
+          "secureInput": false
+        },
+        "userProperties": [],
+        "typeProperties": {
+          "url": "@{pipeline().parameters.notificationWebhook}",
+          "method": "POST",
+          "headers": {
+            "Content-Type": "application/json"
+          },
+          "body": {
+            "message": "ETL Pipeline completed successfully",
+            "pipeline": "@{pipeline().name}",
+            "executionTime": "@{pipeline().runId}",
+            "processedDate": "@{pipeline().parameters.processingDate}"
+          }
+        }
+      },
+      {
+        "name": "SendFailureNotification",
+        "type": "WebActivity",
+        "dependsOn": [
+          {
+            "activity": "ValidateInputData",
+            "dependencyConditions": [
+              "Failed"
+            ]
+          },
+          {
+            "activity": "TransformAndCleanseData",
+            "dependencyConditions": [
+              "Failed"
+            ]
+          },
+          {
+            "activity": "DataQualityChecks",
+            "dependencyConditions": [
+              "Failed"
+            ]
+          },
+          {
+            "activity": "LoadToSQLDatabase",
+            "dependencyConditions": [
+              "Failed"
+            ]
+          }
+        ],
+        "policy": {
+          "timeout": "0.12:00:00",
+          "retry": 0,
+          "retryIntervalInSeconds": 30,
+          "secureOutput": false,
+          "secureInput": false
+        },
+        "userProperties": [],
+        "typeProperties": {
+          "url": "@{pipeline().parameters.notificationWebhook}",
+          "method": "POST",
+          "headers": {
+            "Content-Type": "application/json"
+          },
+          "body": {
+            "message": "ETL Pipeline failed",
+            "pipeline": "@{pipeline().name}",
+            "executionTime": "@{pipeline().runId}",
+            "error": "@{activity('ValidateInputData').error.message}"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "storageAccount": {
+        "type": "string",
+        "defaultValue": "etlpipelinedevdatalake"
+      },
+      "rawContainer": {
+        "type": "string",
+        "defaultValue": "raw-zone"
+      },
+      "stagingContainer": {
+        "type": "string",
+        "defaultValue": "staging-zone"
+      },
+      "curatedContainer": {
+        "type": "string",
+        "defaultValue": "curated-zone"
+      },
+      "processingDate": {
+        "type": "string",
+        "defaultValue": "@{formatDateTime(utcnow(), 'yyyy-MM-dd')}"
+      },
+      "qualityThreshold": {
+        "type": "string",
+        "defaultValue": "0.95"
+      },
+      "notificationWebhook": {
+        "type": "string",
+        "defaultValue": "https://hooks.slack.com/services/YOUR/SLACK/WEBHOOK"
+      }
+    },
+    "folder": {
+      "name": "ETL"
+    },
+    "annotations": [
+      "Production",
+      "ETL",
+      "DataTransformation"
+    ]
+  }
+}

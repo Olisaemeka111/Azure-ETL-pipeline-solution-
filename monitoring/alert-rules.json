@@ -1,0 +1,143 @@
+{
+  "name": "ETL Pipeline Failure Alert",
+  "type": "Microsoft.Insights/alertrules",
+  "apiVersion": "2016-03-01",
+  "location": "global",
+  "properties": {
+    "name": "ETL Pipeline Failure Alert",
+    "description": "Alert when ETL pipeline fails",
+    "isEnabled": true,
+    "condition": {
+      "odata.type": "Microsoft.Azure.Management.Insights.Models.ThresholdRuleCondition",
+      "dataSource": {
+        "odata.type": "Microsoft.Azure.Management.Insights.Models.RuleMetricDataSource",
+        "resourceUri": "/subscriptions/{subscription-id}/resourceGroups/{resource-group}/providers/Microsoft.DataFactory/factories/{adf-name}",
+        "metricName": "PipelineRunsEnded",
+        "metricNamespace": "microsoft.datafactory/factories"
+      },
+      "operator": "GreaterThan",
+      "threshold": 0,
+      "windowSize": "PT5M",
+      "timeAggregation": "Total"
+    },
+    "actions": [
+      {
+        "odata.type": "Microsoft.Azure.Management.Insights.Models.RuleEmailAction",
+        "sendToServiceOwners": true,
+        "customEmails": [
+          "data-team@company.com",
+          "devops@company.com"
+        ]
+      },
+      {
+        "odata.type": "Microsoft.Azure.Management.Insights.Models.RuleWebhookAction",
+        "serviceUri": "https://hooks.slack.com/services/YOUR/SLACK/WEBHOOK",
+        "properties": {
+          "text": "ETL Pipeline Alert: Pipeline failure detected"
+        }
+      }
+    ]
+  }
+}
+
+{
+  "name": "Data Quality Threshold Alert",
+  "type": "Microsoft.Insights/alertrules",
+  "apiVersion": "2016-03-01",
+  "location": "global",
+  "properties": {
+    "name": "Data Quality Threshold Alert",
+    "description": "Alert when data quality falls below threshold",
+    "isEnabled": true,
+    "condition": {
+      "odata.type": "Microsoft.Azure.Management.Insights.Models.ThresholdRuleCondition",
+      "dataSource": {
+        "odata.type": "Microsoft.Azure.Management.Insights.Models.RuleMetricDataSource",
+        "resourceUri": "/subscriptions/{subscription-id}/resourceGroups/{resource-group}/providers/Microsoft.DataFactory/factories/{adf-name}",
+        "metricName": "ActivityRunsEnded",
+        "metricNamespace": "microsoft.datafactory/factories"
+      },
+      "operator": "LessThan",
+      "threshold": 0.95,
+      "windowSize": "PT15M",
+      "timeAggregation": "Average"
+    },
+    "actions": [
+      {
+        "odata.type": "Microsoft.Azure.Management.Insights.Models.RuleEmailAction",
+        "sendToServiceOwners": true,
+        "customEmails": [
+          "data-quality@company.com"
+        ]
+      }
+    ]
+  }
+}
+
+{
+  "name": "Storage Capacity Alert",
+  "type": "Microsoft.Insights/alertrules",
+  "apiVersion": "2016-03-01",
+  "location": "global",
+  "properties": {
+    "name": "Storage Capacity Alert",
+    "description": "Alert when storage capacity exceeds 80%",
+    "isEnabled": true,
+    "condition": {
+      "odata.type": "Microsoft.Azure.Management.Insights.Models.ThresholdRuleCondition",
+      "dataSource": {
+        "odata.type": "Microsoft.Azure.Management.Insights.Models.RuleMetricDataSource",
+        "resourceUri": "/subscriptions/{subscription-id}/resourceGroups/{resource-group}/providers/Microsoft.Storage/storageAccounts/{storage-account}",
+        "metricName": "UsedCapacity",
+        "metricNamespace": "microsoft.storage/storageaccounts"
+      },
+      "operator": "GreaterThan",
+      "threshold": 80,
+      "windowSize": "PT5M",
+      "timeAggregation": "Average"
+    },
+    "actions": [
+      {
+        "odata.type": "Microsoft.Azure.Management.Insights.Models.RuleEmailAction",
+        "sendToServiceOwners": true,
+        "customEmails": [
+          "infrastructure@company.com"
+        ]
+      }
+    ]
+  }
+}
+
+{
+  "name": "Databricks Job Failure Alert",
+  "type": "Microsoft.Insights/alertrules",
+  "apiVersion": "2016-03-01",
+  "location": "global",
+  "properties": {
+    "name": "Databricks Job Failure Alert",
+    "description": "Alert when Databricks job fails",
+    "isEnabled": true,
+    "condition": {
+      "odata.type": "Microsoft.Azure.Management.Insights.Models.ThresholdRuleCondition",
+      "dataSource": {
+        "odata.type": "Microsoft.Azure.Management.Insights.Models.RuleMetricDataSource",
+        "resourceUri": "/subscriptions/{subscription-id}/resourceGroups/{resource-group}/providers/Microsoft.Databricks/workspaces/{databricks-workspace}",
+        "metricName": "jobRunsTotal",
+        "metricNamespace": "microsoft.databricks/workspaces"
+      },
+      "operator": "GreaterThan",
+      "threshold": 0,
+      "windowSize": "PT5M",
+      "timeAggregation": "Total"
+    },
+    "actions": [
+      {
+        "odata.type": "Microsoft.Azure.Management.Insights.Models.RuleEmailAction",
+        "sendToServiceOwners": true,
+        "customEmails": [
+          "databricks-admin@company.com"
+        ]
+      }
+    ]
+  }
+}

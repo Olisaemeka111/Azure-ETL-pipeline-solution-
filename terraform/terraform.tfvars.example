@@ -1,0 +1,39 @@
+# Example Terraform variables file
+# Copy this file to terraform.tfvars and update the values
+
+# Project Configuration
+project_name = "etlpipeline"
+environment  = "dev"
+location     = "East US"
+
+# SQL Server Configuration
+sql_admin_username = "sqladmin"
+sql_admin_password = "YourSecurePassword123!"
+
+# Databricks Configuration
+databricks_cluster_node_type   = "Standard_DS3_v2"
+databricks_cluster_min_workers = 1
+databricks_cluster_max_workers = 4
+
+# Monitoring Configuration
+data_retention_days = 30
+enable_monitoring   = true
+
+# Security Configuration
+enable_private_endpoints = false
+allowed_ip_addresses = [
+  "0.0.0.0-255.255.255.255"  # Replace with your actual IP ranges
+]
+
+# Backup Configuration
+backup_retention_days = 7
+
+# Tags
+tags = {
+  Project     = "ETL Pipeline"
+  Environment = "Development"
+  Owner       = "Data Team"
+  CostCenter  = "IT"
+  CreatedBy   = "Terraform"
+  Version     = "1.0"
+}

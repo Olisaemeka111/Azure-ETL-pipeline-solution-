@@ -1,0 +1,67 @@
+{
+  "name": "AzureDataLakeStorageGen2LinkedService",
+  "properties": {
+    "annotations": [],
+    "type": "AzureBlobFS",
+    "typeProperties": {
+      "url": "https://etlpipelinedevdatalake.dfs.core.windows.net",
+      "accountKey": {
+        "type": "AzureKeyVaultSecret",
+        "store": {
+          "referenceName": "AzureKeyVaultLinkedService",
+          "type": "LinkedServiceReference"
+        },
+        "secretName": "datalake-storage-key"
+      }
+    }
+  }
+}
+
+{
+  "name": "AzureDatabricksLinkedService",
+  "properties": {
+    "annotations": [],
+    "type": "AzureDatabricks",
+    "typeProperties": {
+      "domain": "https://adb-1234567890123456.7.azuredatabricks.net",
+      "accessToken": {
+        "type": "AzureKeyVaultSecret",
+        "store": {
+          "referenceName": "AzureKeyVaultLinkedService",
+          "type": "LinkedServiceReference"
+        },
+        "secretName": "databricks-access-token"
+      },
+      "existingClusterId": "1234-567890-abc123"
+    }
+  }
+}
+
+{
+  "name": "AzureSqlDatabaseLinkedService",
+  "properties": {
+    "annotations": [],
+    "type": "AzureSqlDatabase",
+    "typeProperties": {
+      "connectionString": {
+        "type": "AzureKeyVaultSecret",
+        "store": {
+          "referenceName": "AzureKeyVaultLinkedService",
+          "type": "LinkedServiceReference"
+        },
+        "secretName": "sql-connection-string"
+      }
+    }
+  }
+}
+
+{
+  "name": "AzureKeyVaultLinkedService",
+  "properties": {
+    "annotations": [],
+    "type": "AzureKeyVault",
+    "typeProperties": {
+      "baseUrl": "https://etlpipeline-dev-kv.vault.azure.net/"
+    }
+  }
+}

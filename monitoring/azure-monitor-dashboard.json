@@ -1,0 +1,347 @@
+{
+  "id": "/subscriptions/{subscription-id}/resourceGroups/{resource-group}/providers/Microsoft.Portal/dashboards/etl-pipeline-dashboard",
+  "name": "ETL Pipeline Dashboard",
+  "type": "Microsoft.Portal/dashboards",
+  "location": "eastus",
+  "tags": {
+    "hidden-title": "ETL Pipeline Monitoring Dashboard"
+  },
+  "properties": {
+    "lenses": {
+      "0": {
+        "order": 0,
+        "parts": {
+          "0": {
+            "position": {
+              "x": 0,
+              "y": 0,
+              "colSpan": 6,
+              "rowSpan": 4
+            },
+            "metadata": {
+              "inputs": [
+                {
+                  "name": "options",
+                  "value": {
+                    "chart": {
+                      "metrics": [
+                        {
+                          "resourceMetadata": {
+                            "id": "/subscriptions/{subscription-id}/resourceGroups/{resource-group}/providers/Microsoft.DataFactory/factories/{adf-name}"
+                          },
+                          "name": "PipelineRunsEnded",
+                          "aggregationType": 1,
+                          "namespace": "microsoft.datafactory/factories",
+                          "metricVisualization": {
+                            "displayName": "Pipeline Runs Ended"
+                          }
+                        }
+                      ],
+                      "title": "Pipeline Execution Status",
+                      "titleKind": 1,
+                      "visualization": {
+                        "chartType": 2,
+                        "legendVisualization": {
+                          "isVisible": true,
+                          "position": 2,
+                          "hideSubtitle": false
+                        },
+                        "axisVisualization": {
+                          "x": {
+                            "isVisible": true,
+                            "axisType": 2
+                          },
+                          "y": {
+                            "isVisible": true,
+                            "axisType": 1
+                          }
+                        }
+                      },
+                      "timespan": {
+                        "relative": {
+                          "duration": 86400000
+                        },
+                        "showUTCTime": false,
+                        "grain": 1
+                      }
+                    }
+                  }
+                }
+              ],
+              "type": "Extension/Microsoft_OperationsManagementSuite_Workspace/PartType/LogsDashboardPart",
+              "settings": {}
+            }
+          },
+          "1": {
+            "position": {
+              "x": 6,
+              "y": 0,
+              "colSpan": 6,
+              "rowSpan": 4
+            },
+            "metadata": {
+              "inputs": [
+                {
+                  "name": "options",
+                  "value": {
+                    "chart": {
+                      "metrics": [
+                        {
+                          "resourceMetadata": {
+                            "id": "/subscriptions/{subscription-id}/resourceGroups/{resource-group}/providers/Microsoft.DataFactory/factories/{adf-name}"
+                          },
+                          "name": "ActivityRunsEnded",
+                          "aggregationType": 1,
+                          "namespace": "microsoft.datafactory/factories",
+                          "metricVisualization": {
+                            "displayName": "Activity Runs Ended"
+                          }
+                        }
+                      ],
+                      "title": "Activity Execution Status",
+                      "titleKind": 1,
+                      "visualization": {
+                        "chartType": 2,
+                        "legendVisualization": {
+                          "isVisible": true,
+                          "position": 2,
+                          "hideSubtitle": false
+                        },
+                        "axisVisualization": {
+                          "x": {
+                            "isVisible": true,
+                            "axisType": 2
+                          },
+                          "y": {
+                            "isVisible": true,
+                            "axisType": 1
+                          }
+                        }
+                      },
+                      "timespan": {
+                        "relative": {
+                          "duration": 86400000
+                        },
+                        "showUTCTime": false,
+                        "grain": 1
+                      }
+                    }
+                  }
+                }
+              ],
+              "type": "Extension/Microsoft_OperationsManagementSuite_Workspace/PartType/LogsDashboardPart",
+              "settings": {}
+            }
+          },
+          "2": {
+            "position": {
+              "x": 0,
+              "y": 4,
+              "colSpan": 6,
+              "rowSpan": 4
+            },
+            "metadata": {
+              "inputs": [
+                {
+                  "name": "options",
+                  "value": {
+                    "chart": {
+                      "metrics": [
+                        {
+                          "resourceMetadata": {
+                            "id": "/subscriptions/{subscription-id}/resourceGroups/{resource-group}/providers/Microsoft.Storage/storageAccounts/{storage-account}"
+                          },
+                          "name": "UsedCapacity",
+                          "aggregationType": 1,
+                          "namespace": "microsoft.storage/storageaccounts",
+                          "metricVisualization": {
+                            "displayName": "Storage Used Capacity"
+                          }
+                        }
+                      ],
+                      "title": "Data Lake Storage Usage",
+                      "titleKind": 1,
+                      "visualization": {
+                        "chartType": 2,
+                        "legendVisualization": {
+                          "isVisible": true,
+                          "position": 2,
+                          "hideSubtitle": false
+                        },
+                        "axisVisualization": {
+                          "x": {
+                            "isVisible": true,
+                            "axisType": 2
+                          },
+                          "y": {
+                            "isVisible": true,
+                            "axisType": 1
+                          }
+                        }
+                      },
+                      "timespan": {
+                        "relative": {
+                          "duration": 86400000
+                        },
+                        "showUTCTime": false,
+                        "grain": 1
+                      }
+                    }
+                  }
+                }
+              ],
+              "type": "Extension/Microsoft_OperationsManagementSuite_Workspace/PartType/LogsDashboardPart",
+              "settings": {}
+            }
+          },
+          "3": {
+            "position": {
+              "x": 6,
+              "y": 4,
+              "colSpan": 6,
+              "rowSpan": 4
+            },
+            "metadata": {
+              "inputs": [
+                {
+                  "name": "options",
+                  "value": {
+                    "chart": {
+                      "metrics": [
+                        {
+                          "resourceMetadata": {
+                            "id": "/subscriptions/{subscription-id}/resourceGroups/{resource-group}/providers/Microsoft.Databricks/workspaces/{databricks-workspace}"
+                          },
+                          "name": "jobRunsTotal",
+                          "aggregationType": 1,
+                          "namespace": "microsoft.databricks/workspaces",
+                          "metricVisualization": {
+                            "displayName": "Databricks Job Runs"
+                          }
+                        }
+                      ],
+                      "title": "Databricks Job Execution",
+                      "titleKind": 1,
+                      "visualization": {
+                        "chartType": 2,
+                        "legendVisualization": {
+                          "isVisible": true,
+                          "position": 2,
+                          "hideSubtitle": false
+                        },
+                        "axisVisualization": {
+                          "x": {
+                            "isVisible": true,
+                            "axisType": 2
+                          },
+                          "y": {
+                            "isVisible": true,
+                            "axisType": 1
+                          }
+                        }
+                      },
+                      "timespan": {
+                        "relative": {
+                          "duration": 86400000
+                        },
+                        "showUTCTime": false,
+                        "grain": 1
+                      }
+                    }
+                  }
+                }
+              ],
+              "type": "Extension/Microsoft_OperationsManagementSuite_Workspace/PartType/LogsDashboardPart",
+              "settings": {}
+            }
+          },
+          "4": {
+            "position": {
+              "x": 0,
+              "y": 8,
+              "colSpan": 12,
+              "rowSpan": 4
+            },
+            "metadata": {
+              "inputs": [
+                {
+                  "name": "queryInputs",
+                  "value": {
+                    "timespan": {
+                      "duration": "PT24H",
+                      "startTime": null,
+                      "endTime": null
+                    },
+                    "id": "/subscriptions/{subscription-id}/resourceGroups/{resource-group}/providers/Microsoft.OperationalInsights/workspaces/{log-analytics-workspace}",
+                    "query": "ADFPipelineRun | where TimeGenerated > ago(24h) | summarize PipelineRuns = count() by PipelineName, Status | render columnchart"
+                  }
+                }
+              ],
+              "type": "Extension/Microsoft_OperationsManagementSuite_Workspace/PartType/LogsDashboardPart",
+              "settings": {}
+            }
+          },
+          "5": {
+            "position": {
+              "x": 0,
+              "y": 12,
+              "colSpan": 12,
+              "rowSpan": 4
+            },
+            "metadata": {
+              "inputs": [
+                {
+                  "name": "queryInputs",
+                  "value": {
+                    "timespan": {
+                      "duration": "PT24H",
+                      "startTime": null,
+                      "endTime": null
+                    },
+                    "id": "/subscriptions/{subscription-id}/resourceGroups/{resource-group}/providers/Microsoft.OperationalInsights/workspaces/{log-analytics-workspace}",
+                    "query": "ADFActivityRun | where TimeGenerated > ago(24h) | where Status == 'Failed' | project TimeGenerated, ActivityName, Error, PipelineName | order by TimeGenerated desc"
+                  }
+                }
+              ],
+              "type": "Extension/Microsoft_OperationsManagementSuite_Workspace/PartType/LogsDashboardPart",
+              "settings": {}
+            }
+          }
+        }
+      }
+    },
+    "metadata": {
+      "model": {
+        "timeRange": {
+          "value": {
+            "relative": {
+              "duration": 86400000
+            },
+            "showUTCTime": false,
+            "grain": 1
+          },
+          "type": "MsPortalFx.Composition.Configuration.ValueTypes.TimeRange"
+        },
+        "filterLocale": {
+          "value": "en-us"
+        },
+        "filters": {
+          "value": {
+            "MsPortalFx_TimeRange": {
+              "model": {
+                "format": "utc",
+                "granularity": "auto",
+                "relative": "24h"
+              },
+              "displayCache": {
+                "name": "UTC Time",
+                "value": "Past 24 hours"
+              },
+              "filteredPartIds": []
+            }
+          }
+        }
+      }
+    }
+  }
+}

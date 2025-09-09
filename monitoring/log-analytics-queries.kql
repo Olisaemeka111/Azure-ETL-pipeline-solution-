@@ -1,0 +1,264 @@
+// Log Analytics Queries for ETL Pipeline Monitoring
+// These queries can be used in Azure Monitor, Log Analytics, and Application Insights
+
+// =============================================================================
+// PIPELINE EXECUTION MONITORING
+// =============================================================================
+
+// Pipeline execution summary for the last 24 hours
+ADFPipelineRun
+| where TimeGenerated > ago(24h)
+| summarize 
+    TotalRuns = count(),
+    SuccessfulRuns = countif(Status == "Succeeded"),
+    FailedRuns = countif(Status == "Failed"),
+    RunningRuns = countif(Status == "Running")
+    by PipelineName
+| extend SuccessRate = round((SuccessfulRuns * 100.0) / TotalRuns, 2)
+| order by TotalRuns desc
+
+// Pipeline execution trends over time
+ADFPipelineRun
+| where TimeGenerated > ago(7d)
+| summarize PipelineRuns = count() by bin(TimeGenerated, 1h), Status
+| render timechart
+
+// Failed pipeline runs with error details
+ADFPipelineRun
+| where TimeGenerated > ago(24h)
+| where Status == "Failed"
+| project 
+    TimeGenerated,
+    PipelineName,
+    RunId,
+    Status,
+    ErrorMessage = tostring(parse_json(ErrorMessage).message),
+    Duration = DurationInMs
+| order by TimeGenerated desc
+
+// =============================================================================
+// ACTIVITY EXECUTION MONITORING
+// =============================================================================
+
+// Activity execution summary
+ADFActivityRun
+| where TimeGenerated > ago(24h)
+| summarize 
+    TotalActivities = count(),
+    SuccessfulActivities = countif(Status == "Succeeded"),
+    FailedActivities = countif(Status == "Failed")
+    by ActivityName, PipelineName
+| extend SuccessRate = round((SuccessfulActivities * 100.0) / TotalActivities, 2)
+| order by FailedActivities desc
+
+// Activity execution duration analysis
+ADFActivityRun
+| where TimeGenerated > ago(24h)
+| where Status == "Succeeded"
+| summarize 
+    AvgDuration = avg(DurationInMs),
+    MinDuration = min(DurationInMs),
+    MaxDuration = max(DurationInMs),
+    P95Duration = percentile(DurationInMs, 95)
+    by ActivityName
+| order by AvgDuration desc
+
+// Failed activities with detailed error information
+ADFActivityRun
+| where TimeGenerated > ago(24h)
+| where Status == "Failed"
+| project 
+    TimeGenerated,
+    PipelineName,
+    ActivityName,
+    RunId,
+    Error = tostring(parse_json(Error).message),
+    Duration = DurationInMs
+| order by TimeGenerated desc
+
+// =============================================================================
+// DATA QUALITY MONITORING
+// =============================================================================
+
+// Data quality metrics from Databricks logs
+DatabricksNotebookExecution
+| where TimeGenerated > ago(24h)
+| where NotebookName contains "data-quality"
+| extend QualityScore = extractjson("$.quality_score", tostring(Output))
+| where isnotempty(QualityScore)
+| project 
+    TimeGenerated,
+    NotebookName,
+    QualityScore = toreal(QualityScore),
+    ExecutionStatus
+| order by TimeGenerated desc
+
+// Data processing volume trends
+DatabricksNotebookExecution
+| where TimeGenerated > ago(7d)
+| where NotebookName contains "data-transformation"
+| extend RecordCount = extractjson("$.final_records", tostring(Output))
+| where isnotempty(RecordCount)
+| summarize 
+    TotalRecords = sum(toreal(RecordCount)),
+    AvgRecords = avg(toreal(RecordCount))
+    by bin(TimeGenerated, 1d)
+| render timechart
+
+// =============================================================================
+// STORAGE MONITORING
+// =============================================================================
+
+// Storage account metrics
+AzureMetrics
+| where TimeGenerated > ago(24h)
+| where ResourceProvider == "MICROSOFT.STORAGE"
+| where MetricName == "UsedCapacity"
+| summarize AvgUsedCapacity = avg(Average) by Resource
+| order by AvgUsedCapacity desc
+
+// Data Lake container usage
+AzureDiagnostics
+| where TimeGenerated > ago(24h)
+| where ResourceProvider == "MICROSOFT.STORAGE"
+| where Category == "StorageRead"
+| summarize 
+    ReadOperations = count(),
+    DataRead = sum(toreal(ResponseBodySize))
+    by ContainerName
+| order by DataRead desc
+
+// =============================================================================
+// PERFORMANCE MONITORING
+// =============================================================================
+
+// Pipeline execution performance trends
+ADFPipelineRun
+| where TimeGenerated > ago(7d)
+| where Status == "Succeeded"
+| summarize 
+    AvgDuration = avg(DurationInMs),
+    P95Duration = percentile(DurationInMs, 95),
+    MaxDuration = max(DurationInMs)
+    by bin(TimeGenerated, 1d), PipelineName
+| render timechart
+
+// Resource utilization during pipeline execution
+Perf
+| where TimeGenerated > ago(24h)
+| where CounterName in ("% Processor Time", "Available MBytes", "Disk Read Bytes/sec", "Disk Write Bytes/sec")
+| summarize 
+    AvgValue = avg(CounterValue)
+    by bin(TimeGenerated, 1h), CounterName, Computer
+| render timechart
+
+// =============================================================================
+// ERROR ANALYSIS
+// =============================================================================
+
+// Top error messages across all pipelines
+ADFPipelineRun
+| where TimeGenerated > ago(7d)
+| where Status == "Failed"
+| extend ErrorMessage = tostring(parse_json(ErrorMessage).message)
+| where isnotempty(ErrorMessage)
+| summarize ErrorCount = count() by ErrorMessage
+| order by ErrorCount desc
+| take 10
+
+// Error patterns over time
+ADFPipelineRun
+| where TimeGenerated > ago(7d)
+| where Status == "Failed"
+| extend ErrorType = extract("([A-Za-z]+Error)", 1, tostring(parse_json(ErrorMessage).message))
+| where isnotempty(ErrorType)
+| summarize ErrorCount = count() by bin(TimeGenerated, 1d), ErrorType
+| render timechart
+
+// =============================================================================
+// COST MONITORING
+// =============================================================================
+
+// Estimated costs by resource (requires Cost Management connector)
+AzureCostManagement
+| where TimeGenerated > ago(30d)
+| where ResourceGroup contains "etl"
+| summarize 
+    TotalCost = sum(Cost),
+    AvgDailyCost = avg(Cost)
+    by ResourceName
+| order by TotalCost desc
+
+// =============================================================================
+// SECURITY MONITORING
+// =============================================================================
+
+// Authentication failures
+SigninLogs
+| where TimeGenerated > ago(24h)
+| where ResultType != "0"
+| where ResourceGroup contains "etl"
+| project 
+    TimeGenerated,
+    UserPrincipalName,
+    AppDisplayName,
+    IPAddress,
+    ResultType,
+    ResultDescription
+| order by TimeGenerated desc
+
+// Key Vault access patterns
+AzureDiagnostics
+| where TimeGenerated > ago(24h)
+| where ResourceProvider == "MICROSOFT.KEYVAULT"
+| where Category == "AuditEvent"
+| summarize AccessCount = count() by OperationName, CallerIPAddress
+| order by AccessCount desc
+
+// =============================================================================
+// CUSTOM DASHBOARD QUERIES
+// =============================================================================
+
+// ETL Pipeline Health Score
+let PipelineHealth = ADFPipelineRun
+| where TimeGenerated > ago(24h)
+| summarize 
+    TotalRuns = count(),
+    SuccessfulRuns = countif(Status == "Succeeded")
+    by PipelineName
+| extend HealthScore = round((SuccessfulRuns * 100.0) / TotalRuns, 2);
+
+let QualityHealth = DatabricksNotebookExecution
+| where TimeGenerated > ago(24h)
+| where NotebookName contains "data-quality"
+| extend QualityScore = extractjson("$.quality_score", tostring(Output))
+| where isnotempty(QualityScore)
+| summarize AvgQualityScore = avg(toreal(QualityScore));
+
+PipelineHealth
+| extend OverallHealth = HealthScore
+| union (
+    QualityHealth
+    | extend PipelineName = "Data Quality", OverallHealth = AvgQualityScore
+)
+| project PipelineName, OverallHealth
+| order by OverallHealth desc
+
+// Data Processing Summary
+ADFPipelineRun
+| where TimeGenerated > ago(24h)
+| where Status == "Succeeded"
+| join kind=inner (
+    DatabricksNotebookExecution
+    | where TimeGenerated > ago(24h)
+    | where NotebookName contains "data-transformation"
+    | extend RecordCount = extractjson("$.final_records", tostring(Output))
+    | where isnotempty(RecordCount)
+    | project RunId, ProcessedRecords = toreal(RecordCount)
+) on $left.RunId == $right.RunId
+| summarize 
+    TotalPipelines = count(),
+    TotalRecords = sum(ProcessedRecords),
+    AvgRecordsPerPipeline = avg(ProcessedRecords)
+    by bin(TimeGenerated, 1h)
+| render timechart

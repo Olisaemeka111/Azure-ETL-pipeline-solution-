@@ -1,0 +1,258 @@
+{
+  "name": "RawDataDataset",
+  "properties": {
+    "linkedServiceName": {
+      "referenceName": "AzureDataLakeStorageGen2LinkedService",
+      "type": "LinkedServiceReference"
+    },
+    "annotations": [],
+    "type": "Parquet",
+    "typeProperties": {
+      "location": {
+        "type": "AzureBlobFSLocation",
+        "fileSystem": "raw-zone",
+        "folderPath": "input/{year}/{month}/{day}",
+        "fileName": "*.parquet"
+      }
+    },
+    "schema": [
+      {
+        "name": "id",
+        "type": "string"
+      },
+      {
+        "name": "customer_name",
+        "type": "string"
+      },
+      {
+        "name": "email",
+        "type": "string"
+      },
+      {
+        "name": "phone",
+        "type": "string"
+      },
+      {
+        "name": "address",
+        "type": "string"
+      },
+      {
+        "name": "order_date",
+        "type": "datetime"
+      },
+      {
+        "name": "order_amount",
+        "type": "decimal"
+      },
+      {
+        "name": "product_category",
+        "type": "string"
+      },
+      {
+        "name": "processing_timestamp",
+        "type": "datetime"
+      }
+    ]
+  }
+}
+
+{
+  "name": "StagingDataDataset",
+  "properties": {
+    "linkedServiceName": {
+      "referenceName": "AzureDataLakeStorageGen2LinkedService",
+      "type": "LinkedServiceReference"
+    },
+    "annotations": [],
+    "type": "Parquet",
+    "typeProperties": {
+      "location": {
+        "type": "AzureBlobFSLocation",
+        "fileSystem": "staging-zone",
+        "folderPath": "validated/{year}/{month}/{day}",
+        "fileName": "validated_data.parquet"
+      }
+    },
+    "schema": [
+      {
+        "name": "id",
+        "type": "string"
+      },
+      {
+        "name": "customer_name",
+        "type": "string"
+      },
+      {
+        "name": "email",
+        "type": "string"
+      },
+      {
+        "name": "phone",
+        "type": "string"
+      },
+      {
+        "name": "address",
+        "type": "string"
+      },
+      {
+        "name": "order_date",
+        "type": "datetime"
+      },
+      {
+        "name": "order_amount",
+        "type": "decimal"
+      },
+      {
+        "name": "product_category",
+        "type": "string"
+      },
+      {
+        "name": "processing_timestamp",
+        "type": "datetime"
+      },
+      {
+        "name": "validation_status",
+        "type": "string"
+      },
+      {
+        "name": "quality_score",
+        "type": "decimal"
+      }
+    ]
+  }
+}
+
+{
+  "name": "CuratedDataDataset",
+  "properties": {
+    "linkedServiceName": {
+      "referenceName": "AzureDataLakeStorageGen2LinkedService",
+      "type": "LinkedServiceReference"
+    },
+    "annotations": [],
+    "type": "Parquet",
+    "typeProperties": {
+      "location": {
+        "type": "AzureBlobFSLocation",
+        "fileSystem": "curated-zone",
+        "folderPath": "processed/{year}/{month}/{day}",
+        "fileName": "curated_data.parquet"
+      }
+    },
+    "schema": [
+      {
+        "name": "id",
+        "type": "string"
+      },
+      {
+        "name": "customer_id",
+        "type": "string"
+      },
+      {
+        "name": "customer_name",
+        "type": "string"
+      },
+      {
+        "name": "email_hash",
+        "type": "string"
+      },
+      {
+        "name": "phone_masked",
+        "type": "string"
+      },
+      {
+        "name": "address_normalized",
+        "type": "string"
+      },
+      {
+        "name": "order_date",
+        "type": "date"
+      },
+      {
+        "name": "order_amount_usd",
+        "type": "decimal"
+      },
+      {
+        "name": "product_category_standardized",
+        "type": "string"
+      },
+      {
+        "name": "processing_timestamp",
+        "type": "datetime"
+      },
+      {
+        "name": "data_quality_score",
+        "type": "decimal"
+      },
+      {
+        "name": "pii_masked",
+        "type": "boolean"
+      }
+    ]
+  }
+}
+
+{
+  "name": "SQLDatabaseDataset",
+  "properties": {
+    "linkedServiceName": {
+      "referenceName": "AzureSqlDatabaseLinkedService",
+      "type": "LinkedServiceReference"
+    },
+    "annotations": [],
+    "type": "AzureSqlTable",
+    "typeProperties": {
+      "tableName": "[dbo].[curated_orders]"
+    },
+    "schema": [
+      {
+        "name": "id",
+        "type": "nvarchar"
+      },
+      {
+        "name": "customer_id",
+        "type": "nvarchar"
+      },
+      {
+        "name": "customer_name",
+        "type": "nvarchar"
+      },
+      {
+        "name": "email_hash",
+        "type": "nvarchar"
+      },
+      {
+        "name": "phone_masked",
+        "type": "nvarchar"
+      },
+      {
+        "name": "address_normalized",
+        "type": "nvarchar"
+      },
+      {
+        "name": "order_date",
+        "type": "date"
+      },
+      {
+        "name": "order_amount_usd",
+        "type": "decimal"
+      },
+      {
+        "name": "product_category_standardized",
+        "type": "nvarchar"
+      },
+      {
+        "name": "processing_timestamp",
+        "type": "datetime2"
+      },
+      {
+        "name": "data_quality_score",
+        "type": "decimal"
+      },
+      {
+        "name": "pii_masked",
+        "type": "bit"
+      }
+    ]
+  }
+}
