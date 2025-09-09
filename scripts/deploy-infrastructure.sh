@@ -54,6 +54,57 @@ check_prerequisites() {
     print_success "Prerequisites check passed"
 }
 
+# Function to create Terraform state storage
+create_terraform_state_storage() {
+    print_status "Creating Terraform state storage infrastructure..."
+    
+    # Variables for state storage
+    STATE_RG_NAME="rg-terraform-state-$(date +%s)"
+    STATE_STORAGE_NAME="stterraformstate$(date +%s | tail -c 6)"
+    STATE_CONTAINER_NAME="tfstate"
+    STATE_KEY="etl-pipeline.tfstate"
+    
+    # Create resource group for state storage
+    print_status "Creating resource group for Terraform state..."
+    az group create \
+        --name $STATE_RG_NAME \
+        --location "Central US" \
+        --output none
+    
+    # Create storage account for state
+    print_status "Creating storage account for Terraform state..."
+    az storage account create \
+        --resource-group $STATE_RG_NAME \
+        --name $STATE_STORAGE_NAME \
+        --sku Standard_LRS \
+        --encryption-services blob \
+        --output none
+    
+    # Create container for state
+    print_status "Creating container for Terraform state..."
+    az storage container create \
+        --name $STATE_CONTAINER_NAME \
+        --account-name $STATE_STORAGE_NAME \
+        --auth-mode login \
+        --output none
+    
+    # Save state storage configuration
+    cat > terraform/backend-config.tfvars << EOF
+# Terraform Backend Configuration
+resource_group_name  = "$STATE_RG_NAME"
+storage_account_name = "$STATE_STORAGE_NAME"
+container_name       = "$STATE_CONTAINER_NAME"
+key                  = "$STATE_KEY"
+EOF
+    
+    print_success "Terraform state storage created successfully"
+    print_status "State storage details:"
+    print_status "  Resource Group: $STATE_RG_NAME"
+    print_status "  Storage Account: $STATE_STORAGE_NAME"
+    print_status "  Container: $STATE_CONTAINER_NAME"
+    print_status "  Key: $STATE_KEY"
+}
+
 # Function to validate configuration
 validate_config() {
     print_status "Validating configuration..."
@@ -80,8 +131,12 @@ init_terraform() {
     
     cd terraform
     
-    # Initialize Terraform
-    terraform init
+    # Initialize Terraform with backend configuration
+    if [ -f "backend-config.tfvars" ]; then
+        terraform init -migrate-state -backend-config=backend-config.tfvars
+    else
+        terraform init
+    fi
     
     if [ $? -eq 0 ]; then
         print_success "Terraform initialized successfully"
@@ -231,6 +286,9 @@ main() {
     
     # Check prerequisites
     check_prerequisites
+    
+    # Create Terraform state storage
+    create_terraform_state_storage
     
     # Validate configuration
     validate_config

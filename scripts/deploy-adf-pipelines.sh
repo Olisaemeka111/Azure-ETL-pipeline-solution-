@@ -76,8 +76,24 @@ update_linked_services() {
     # Create temporary directory for updated files
     mkdir -p temp
     
-    # Update linked services JSON with actual values
-    cat > temp/linked-services-updated.json << EOF
+    # Create separate JSON files for each linked service
+    
+    # Key Vault Linked Service
+    cat > temp/azure-keyvault-linked-service.json << EOF
+{
+  "name": "AzureKeyVaultLinkedService",
+  "properties": {
+    "annotations": [],
+    "type": "AzureKeyVault",
+    "typeProperties": {
+      "baseUrl": "https://${KEY_VAULT_NAME}.vault.azure.net/"
+    }
+  }
+}
+EOF
+
+    # Data Lake Storage Linked Service
+    cat > temp/azure-datalake-linked-service.json << EOF
 {
   "name": "AzureDataLakeStorageGen2LinkedService",
   "properties": {
@@ -96,7 +112,10 @@ update_linked_services() {
     }
   }
 }
+EOF
 
+    # Databricks Linked Service
+    cat > temp/azure-databricks-linked-service.json << EOF
 {
   "name": "AzureDatabricksLinkedService",
   "properties": {
@@ -116,7 +135,10 @@ update_linked_services() {
     }
   }
 }
+EOF
 
+    # SQL Database Linked Service
+    cat > temp/azure-sql-linked-service.json << EOF
 {
   "name": "AzureSqlDatabaseLinkedService",
   "properties": {
@@ -134,17 +156,6 @@ update_linked_services() {
     }
   }
 }
-
-{
-  "name": "AzureKeyVaultLinkedService",
-  "properties": {
-    "annotations": [],
-    "type": "AzureKeyVault",
-    "typeProperties": {
-      "baseUrl": "https://${KEY_VAULT_NAME}.vault.azure.net/"
-    }
-  }
-}
 EOF
     
     print_success "Linked services updated with actual values"
@@ -154,30 +165,33 @@ EOF
 deploy_linked_services() {
     print_status "Deploying linked services..."
     
-    # Deploy each linked service
+    # Deploy Key Vault linked service first (required for others)
     az datafactory linked-service create \
         --resource-group $RESOURCE_GROUP \
         --factory-name $DATA_FACTORY_NAME \
         --linked-service-name "AzureKeyVaultLinkedService" \
-        --properties @temp/linked-services-updated.json
+        --properties @temp/azure-keyvault-linked-service.json
     
+    # Deploy Data Lake Storage linked service
     az datafactory linked-service create \
         --resource-group $RESOURCE_GROUP \
         --factory-name $DATA_FACTORY_NAME \
         --linked-service-name "AzureDataLakeStorageGen2LinkedService" \
-        --properties @temp/linked-services-updated.json
+        --properties @temp/azure-datalake-linked-service.json
     
+    # Deploy SQL Database linked service
     az datafactory linked-service create \
         --resource-group $RESOURCE_GROUP \
         --factory-name $DATA_FACTORY_NAME \
         --linked-service-name "AzureSqlDatabaseLinkedService" \
-        --properties @temp/linked-services-updated.json
+        --properties @temp/azure-sql-linked-service.json
     
+    # Deploy Databricks linked service
     az datafactory linked-service create \
         --resource-group $RESOURCE_GROUP \
         --factory-name $DATA_FACTORY_NAME \
         --linked-service-name "AzureDatabricksLinkedService" \
-        --properties @temp/linked-services-updated.json
+        --properties @temp/azure-databricks-linked-service.json
     
     print_success "Linked services deployed successfully"
 }

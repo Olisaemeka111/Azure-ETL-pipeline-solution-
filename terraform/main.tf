@@ -15,7 +15,7 @@ terraform {
   }
   
   backend "azurerm" {
-    # Configure backend in terraform.tfvars
+    # Configure backend in backend-config.tfvars
     # resource_group_name  = "rg-terraform-state"
     # storage_account_name = "stterraformstate"
     # container_name       = "tfstate"
@@ -190,7 +190,7 @@ resource "azurerm_application_insights" "etl_insights" {
 
 # Storage Account for Data Factory artifacts
 resource "azurerm_storage_account" "adf_artifacts" {
-  name                     = "${var.project_name}${var.environment}adfartifacts"
+  name                     = "${var.project_name}${var.environment}adfart"
   resource_group_name      = azurerm_resource_group.etl_rg.name
   location                 = azurerm_resource_group.etl_rg.location
   account_tier             = "Standard"
