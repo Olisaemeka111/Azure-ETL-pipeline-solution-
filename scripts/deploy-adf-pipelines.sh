@@ -62,7 +62,7 @@ get_resource_info() {
     DATA_FACTORY_NAME=$(jq -r '.data_factory_name.value' outputs.json)
     STORAGE_ACCOUNT_NAME=$(jq -r '.storage_account_name.value' outputs.json)
     KEY_VAULT_NAME=$(jq -r '.key_vault_name.value' outputs.json)
-    DATABRICKS_WORKSPACE_URL=$(jq -r '.databricks_workspace_url.value' outputs.json)
+    DATABRICKS_WORKSPACE_URL="adb-0a36ca95.cbf2.azuredatabricks.net"
     SQL_SERVER_NAME=$(jq -r '.sql_server_name.value' outputs.json)
     SQL_DATABASE_NAME=$(jq -r '.sql_database_name.value' outputs.json)
     
@@ -170,28 +170,72 @@ deploy_linked_services() {
         --resource-group $RESOURCE_GROUP \
         --factory-name $DATA_FACTORY_NAME \
         --linked-service-name "AzureKeyVaultLinkedService" \
-        --properties @temp/azure-keyvault-linked-service.json
+        --properties '{
+            "type": "AzureKeyVault",
+            "typeProperties": {
+                "baseUrl": "https://'$KEY_VAULT_NAME'.vault.azure.net/"
+            }
+        }'
     
     # Deploy Data Lake Storage linked service
     az datafactory linked-service create \
         --resource-group $RESOURCE_GROUP \
         --factory-name $DATA_FACTORY_NAME \
         --linked-service-name "AzureDataLakeStorageGen2LinkedService" \
-        --properties @temp/azure-datalake-linked-service.json
+        --properties '{
+            "type": "AzureBlobFS",
+            "typeProperties": {
+                "url": "https://'$STORAGE_ACCOUNT_NAME'.dfs.core.windows.net",
+                "accountKey": {
+                    "type": "AzureKeyVaultSecret",
+                    "store": {
+                        "referenceName": "AzureKeyVaultLinkedService",
+                        "type": "LinkedServiceReference"
+                    },
+                    "secretName": "datalake-storage-key"
+                }
+            }
+        }'
     
     # Deploy SQL Database linked service
     az datafactory linked-service create \
         --resource-group $RESOURCE_GROUP \
         --factory-name $DATA_FACTORY_NAME \
         --linked-service-name "AzureSqlDatabaseLinkedService" \
-        --properties @temp/azure-sql-linked-service.json
+        --properties '{
+            "type": "AzureSqlDatabase",
+            "typeProperties": {
+                "connectionString": {
+                    "type": "AzureKeyVaultSecret",
+                    "store": {
+                        "referenceName": "AzureKeyVaultLinkedService",
+                        "type": "LinkedServiceReference"
+                    },
+                    "secretName": "sql-connection-string"
+                }
+            }
+        }'
     
     # Deploy Databricks linked service
     az datafactory linked-service create \
         --resource-group $RESOURCE_GROUP \
         --factory-name $DATA_FACTORY_NAME \
         --linked-service-name "AzureDatabricksLinkedService" \
-        --properties @temp/azure-databricks-linked-service.json
+        --properties '{
+            "type": "AzureDatabricks",
+            "typeProperties": {
+                "domain": "https://'$DATABRICKS_WORKSPACE_URL'",
+                "accessToken": {
+                    "type": "AzureKeyVaultSecret",
+                    "store": {
+                        "referenceName": "AzureKeyVaultLinkedService",
+                        "type": "LinkedServiceReference"
+                    },
+                    "secretName": "databricks-access-token"
+                },
+                "existingClusterId": "auto"
+            }
+        }'
     
     print_success "Linked services deployed successfully"
 }
@@ -200,12 +244,292 @@ deploy_linked_services() {
 deploy_datasets() {
     print_status "Deploying datasets..."
     
-    # Deploy datasets
+    # Create temp directory for dataset files
+    mkdir -p temp
+    
+    # Raw Data Dataset
+    cat > temp/raw-data-dataset.json << EOF
+{
+  "linkedServiceName": {
+    "referenceName": "AzureDataLakeStorageGen2LinkedService",
+    "type": "LinkedServiceReference"
+  },
+  "annotations": [],
+  "type": "Parquet",
+  "typeProperties": {
+    "location": {
+      "type": "AzureBlobFSLocation",
+      "fileSystem": "raw-zone",
+      "folderPath": "input/{year}/{month}/{day}",
+      "fileName": "*.parquet"
+    }
+  },
+  "schema": [
+    {
+      "name": "id",
+      "type": "string"
+    },
+    {
+      "name": "customer_name",
+      "type": "string"
+    },
+    {
+      "name": "email",
+      "type": "string"
+    },
+    {
+      "name": "phone",
+      "type": "string"
+    },
+    {
+      "name": "address",
+      "type": "string"
+    },
+    {
+      "name": "order_date",
+      "type": "datetime"
+    },
+    {
+      "name": "order_amount",
+      "type": "decimal"
+    },
+    {
+      "name": "product_category",
+      "type": "string"
+    },
+    {
+      "name": "processing_timestamp",
+      "type": "datetime"
+    }
+  ]
+}
+EOF
+
+    # Staging Data Dataset
+    cat > temp/staging-data-dataset.json << EOF
+{
+  "linkedServiceName": {
+    "referenceName": "AzureDataLakeStorageGen2LinkedService",
+    "type": "LinkedServiceReference"
+  },
+  "annotations": [],
+  "type": "Parquet",
+  "typeProperties": {
+    "location": {
+      "type": "AzureBlobFSLocation",
+      "fileSystem": "staging-zone",
+      "folderPath": "validated/{year}/{month}/{day}",
+      "fileName": "validated_data.parquet"
+    }
+  },
+  "schema": [
+    {
+      "name": "id",
+      "type": "string"
+    },
+    {
+      "name": "customer_name",
+      "type": "string"
+    },
+    {
+      "name": "email",
+      "type": "string"
+    },
+    {
+      "name": "phone",
+      "type": "string"
+    },
+    {
+      "name": "address",
+      "type": "string"
+    },
+    {
+      "name": "order_date",
+      "type": "datetime"
+    },
+    {
+      "name": "order_amount",
+      "type": "decimal"
+    },
+    {
+      "name": "product_category",
+      "type": "string"
+    },
+    {
+      "name": "processing_timestamp",
+      "type": "datetime"
+    },
+    {
+      "name": "validation_status",
+      "type": "string"
+    },
+    {
+      "name": "quality_score",
+      "type": "decimal"
+    }
+  ]
+}
+EOF
+
+    # Curated Data Dataset
+    cat > temp/curated-data-dataset.json << EOF
+{
+  "linkedServiceName": {
+    "referenceName": "AzureDataLakeStorageGen2LinkedService",
+    "type": "LinkedServiceReference"
+  },
+  "annotations": [],
+  "type": "Parquet",
+  "typeProperties": {
+    "location": {
+      "type": "AzureBlobFSLocation",
+      "fileSystem": "curated-zone",
+      "folderPath": "processed/{year}/{month}/{day}",
+      "fileName": "curated_data.parquet"
+    }
+  },
+  "schema": [
+    {
+      "name": "id",
+      "type": "string"
+    },
+    {
+      "name": "customer_id",
+      "type": "string"
+    },
+    {
+      "name": "customer_name",
+      "type": "string"
+    },
+    {
+      "name": "email_hash",
+      "type": "string"
+    },
+    {
+      "name": "phone_masked",
+      "type": "string"
+    },
+    {
+      "name": "address_normalized",
+      "type": "string"
+    },
+    {
+      "name": "order_date",
+      "type": "date"
+    },
+    {
+      "name": "order_amount_usd",
+      "type": "decimal"
+    },
+    {
+      "name": "product_category_standardized",
+      "type": "string"
+    },
+    {
+      "name": "processing_timestamp",
+      "type": "datetime"
+    },
+    {
+      "name": "data_quality_score",
+      "type": "decimal"
+    },
+    {
+      "name": "pii_masked",
+      "type": "boolean"
+    }
+  ]
+}
+EOF
+
+    # SQL Database Dataset
+    cat > temp/sql-database-dataset.json << EOF
+{
+  "linkedServiceName": {
+    "referenceName": "AzureSqlDatabaseLinkedService",
+    "type": "LinkedServiceReference"
+  },
+  "annotations": [],
+  "type": "AzureSqlTable",
+  "typeProperties": {
+    "tableName": "[dbo].[curated_orders]"
+  },
+  "schema": [
+    {
+      "name": "id",
+      "type": "nvarchar"
+    },
+    {
+      "name": "customer_id",
+      "type": "nvarchar"
+    },
+    {
+      "name": "customer_name",
+      "type": "nvarchar"
+    },
+    {
+      "name": "email_hash",
+      "type": "nvarchar"
+    },
+    {
+      "name": "phone_masked",
+      "type": "nvarchar"
+    },
+    {
+      "name": "address_normalized",
+      "type": "nvarchar"
+    },
+    {
+      "name": "order_date",
+      "type": "date"
+    },
+    {
+      "name": "order_amount_usd",
+      "type": "decimal"
+    },
+    {
+      "name": "product_category_standardized",
+      "type": "nvarchar"
+    },
+    {
+      "name": "processing_timestamp",
+      "type": "datetime2"
+    },
+    {
+      "name": "data_quality_score",
+      "type": "decimal"
+    },
+    {
+      "name": "pii_masked",
+      "type": "bit"
+    }
+  ]
+}
+EOF
+
+    # Deploy each dataset
     az datafactory dataset create \
         --resource-group $RESOURCE_GROUP \
         --factory-name $DATA_FACTORY_NAME \
         --name "RawDataDataset" \
-        --properties @adf-pipelines/datasets.json
+        --properties @temp/raw-data-dataset.json
+    
+    az datafactory dataset create \
+        --resource-group $RESOURCE_GROUP \
+        --factory-name $DATA_FACTORY_NAME \
+        --name "StagingDataDataset" \
+        --properties @temp/staging-data-dataset.json
+    
+    az datafactory dataset create \
+        --resource-group $RESOURCE_GROUP \
+        --factory-name $DATA_FACTORY_NAME \
+        --name "CuratedDataDataset" \
+        --properties @temp/curated-data-dataset.json
+    
+    az datafactory dataset create \
+        --resource-group $RESOURCE_GROUP \
+        --factory-name $DATA_FACTORY_NAME \
+        --name "SQLDatabaseDataset" \
+        --properties @temp/sql-database-dataset.json
     
     print_success "Datasets deployed successfully"
 }
@@ -214,12 +538,152 @@ deploy_datasets() {
 deploy_pipelines() {
     print_status "Deploying pipelines..."
     
+    # Create main ETL pipeline
+    cat > temp/main-etl-pipeline.json << EOF
+{
+  "activities": [
+    {
+      "name": "CopyRawData",
+      "type": "Copy",
+      "dependsOn": [],
+      "policy": {
+        "timeout": "7.00:00:00",
+        "retry": 0,
+        "retryIntervalInSeconds": 30,
+        "secureOutput": false,
+        "secureInput": false
+      },
+      "userProperties": [],
+      "typeProperties": {
+        "source": {
+          "type": "ParquetSource",
+          "storeSettings": {
+            "type": "AzureBlobFSReadSettings",
+            "recursive": true
+          }
+        },
+        "sink": {
+          "type": "ParquetSink",
+          "storeSettings": {
+            "type": "AzureBlobFSWriteSettings"
+          }
+        },
+        "enableStaging": false
+      },
+      "inputs": [
+        {
+          "referenceName": "RawDataDataset",
+          "type": "DatasetReference"
+        }
+      ],
+      "outputs": [
+        {
+          "referenceName": "StagingDataDataset",
+          "type": "DatasetReference"
+        }
+      ]
+    },
+    {
+      "name": "ProcessData",
+      "type": "DatabricksNotebook",
+      "dependsOn": [
+        {
+          "activity": "CopyRawData",
+          "dependencyConditions": [
+            "Succeeded"
+          ]
+        }
+      ],
+      "policy": {
+        "timeout": "7.00:00:00",
+        "retry": 0,
+        "retryIntervalInSeconds": 30,
+        "secureOutput": false,
+        "secureInput": false
+      },
+      "userProperties": [],
+      "typeProperties": {
+        "notebookPath": "/ETL/DataProcessing",
+        "baseParameters": {
+          "input_path": "@{pipeline().parameters.inputPath}",
+          "output_path": "@{pipeline().parameters.outputPath}"
+        }
+      },
+      "linkedServiceName": {
+        "referenceName": "AzureDatabricksLinkedService",
+        "type": "LinkedServiceReference"
+      }
+    },
+    {
+      "name": "LoadToSQL",
+      "type": "Copy",
+      "dependsOn": [
+        {
+          "activity": "ProcessData",
+          "dependencyConditions": [
+            "Succeeded"
+          ]
+        }
+      ],
+      "policy": {
+        "timeout": "7.00:00:00",
+        "retry": 0,
+        "retryIntervalInSeconds": 30,
+        "secureOutput": false,
+        "secureInput": false
+      },
+      "userProperties": [],
+      "typeProperties": {
+        "source": {
+          "type": "ParquetSource",
+          "storeSettings": {
+            "type": "AzureBlobFSReadSettings",
+            "recursive": true
+          }
+        },
+        "sink": {
+          "type": "SqlSink",
+          "writeBehavior": "insert",
+          "sqlWriterStoredProcedureName": "sp_upsert_curated_orders",
+          "sqlWriterTableType": "CuratedOrdersType"
+        },
+        "enableStaging": false
+      },
+      "inputs": [
+        {
+          "referenceName": "CuratedDataDataset",
+          "type": "DatasetReference"
+        }
+      ],
+      "outputs": [
+        {
+          "referenceName": "SQLDatabaseDataset",
+          "type": "DatasetReference"
+        }
+      ]
+    }
+  ],
+  "parameters": {
+    "inputPath": {
+      "type": "string",
+      "defaultValue": "raw-zone/input"
+    },
+    "outputPath": {
+      "type": "string",
+      "defaultValue": "curated-zone/processed"
+    }
+  },
+  "annotations": [],
+  "lastPublishTime": "2024-01-01T00:00:00Z"
+}
+EOF
+
     # Deploy main ETL pipeline
     az datafactory pipeline create \
         --resource-group $RESOURCE_GROUP \
         --factory-name $DATA_FACTORY_NAME \
         --name "MainETLPipeline" \
-        --pipeline @adf-pipelines/main-etl-pipeline.json
+        --pipeline @temp/main-etl-pipeline.json
     
     print_success "Pipelines deployed successfully"
 }

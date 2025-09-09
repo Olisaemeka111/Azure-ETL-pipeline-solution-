@@ -54,39 +54,54 @@ check_prerequisites() {
     print_success "Prerequisites check passed"
 }
 
-# Function to create Terraform state storage
+# Function to create or reuse Terraform state storage
 create_terraform_state_storage() {
-    print_status "Creating Terraform state storage infrastructure..."
+    print_status "Setting up Terraform state storage infrastructure..."
     
-    # Variables for state storage
-    STATE_RG_NAME="rg-terraform-state-$(date +%s)"
-    STATE_STORAGE_NAME="stterraformstate$(date +%s | tail -c 6)"
+    # Static names for state storage (cost-efficient)
+    STATE_RG_NAME="rg-terraform-state"
+    STATE_STORAGE_NAME="stterraformstateetl"
     STATE_CONTAINER_NAME="tfstate"
     STATE_KEY="etl-pipeline.tfstate"
     
-    # Create resource group for state storage
-    print_status "Creating resource group for Terraform state..."
-    az group create \
-        --name $STATE_RG_NAME \
-        --location "West US 2" \
-        --output none
+    # Check if resource group exists
+    if az group show --name $STATE_RG_NAME --output none 2>/dev/null; then
+        print_status "Resource group '$STATE_RG_NAME' already exists. Reusing..."
+    else
+        print_status "Creating resource group for Terraform state..."
+        az group create \
+            --name $STATE_RG_NAME \
+            --location "westus2" \
+            --output none
+        print_success "Resource group created: $STATE_RG_NAME"
+    fi
     
-    # Create storage account for state
-    print_status "Creating storage account for Terraform state..."
-    az storage account create \
-        --resource-group $STATE_RG_NAME \
-        --name $STATE_STORAGE_NAME \
-        --sku Standard_LRS \
-        --encryption-services blob \
-        --output none
+    # Check if storage account exists
+    if az storage account show --resource-group $STATE_RG_NAME --name $STATE_STORAGE_NAME --output none 2>/dev/null; then
+        print_status "Storage account '$STATE_STORAGE_NAME' already exists. Reusing..."
+    else
+        print_status "Creating storage account for Terraform state..."
+        az storage account create \
+            --resource-group $STATE_RG_NAME \
+            --name $STATE_STORAGE_NAME \
+            --sku Standard_LRS \
+            --encryption-services blob \
+            --output none
+        print_success "Storage account created: $STATE_STORAGE_NAME"
+    fi
     
-    # Create container for state
-    print_status "Creating container for Terraform state..."
-    az storage container create \
-        --name $STATE_CONTAINER_NAME \
-        --account-name $STATE_STORAGE_NAME \
-        --auth-mode login \
-        --output none
+    # Check if container exists
+    if az storage container show --account-name $STATE_STORAGE_NAME --name $STATE_CONTAINER_NAME --auth-mode login --output none 2>/dev/null; then
+        print_status "Container '$STATE_CONTAINER_NAME' already exists. Reusing..."
+    else
+        print_status "Creating container for Terraform state..."
+        az storage container create \
+            --name $STATE_CONTAINER_NAME \
+            --account-name $STATE_STORAGE_NAME \
+            --auth-mode login \
+            --output none
+        print_success "Container created: $STATE_CONTAINER_NAME"
+    fi
     
     # Save state storage configuration
     cat > terraform/backend-config.tfvars << EOF
@@ -97,12 +112,32 @@ container_name       = "$STATE_CONTAINER_NAME"
 key                  = "$STATE_KEY"
 EOF
     
-    print_success "Terraform state storage created successfully"
+    print_success "Terraform state storage ready"
     print_status "State storage details:"
     print_status "  Resource Group: $STATE_RG_NAME"
     print_status "  Storage Account: $STATE_STORAGE_NAME"
     print_status "  Container: $STATE_CONTAINER_NAME"
     print_status "  Key: $STATE_KEY"
+}
+
+# Function to cleanup old Terraform state resources
+cleanup_old_terraform_resources() {
+    print_status "Checking for old Terraform state resources to cleanup..."
+    
+    # List all resource groups that match the old pattern
+    OLD_RGS=$(az group list --query "[?contains(name, 'rg-terraform-state-') && name != 'rg-terraform-state'].name" --output tsv)
+    
+    if [ -n "$OLD_RGS" ]; then
+        print_warning "Found old Terraform state resource groups:"
+        echo "$OLD_RGS"
+        print_warning "These can be safely deleted to reduce costs."
+        print_status "To delete them, run:"
+        for rg in $OLD_RGS; do
+            print_status "  az group delete --name $rg --yes --no-wait"
+        done
+    else
+        print_success "No old Terraform state resources found."
+    fi
 }
 
 # Function to validate configuration
@@ -173,8 +208,8 @@ apply_terraform() {
     
     cd terraform
     
-    # Apply Terraform plan
-    terraform apply tfplan
+    # Apply Terraform plan with auto-approval
+    terraform apply -auto-approve tfplan
     
     if [ $? -eq 0 ]; then
         print_success "Terraform deployment completed successfully"
@@ -287,7 +322,10 @@ main() {
     # Check prerequisites
     check_prerequisites
     
-    # Create Terraform state storage
+    # Cleanup old Terraform resources (cost optimization)
+    cleanup_old_terraform_resources
+    
+    # Create or reuse Terraform state storage
     create_terraform_state_storage
     
     # Validate configuration
@@ -299,35 +337,27 @@ main() {
     # Plan deployment
     plan_terraform
     
-    # Ask for confirmation
-    echo
+    # Apply deployment (auto-approved)
     print_warning "This will create Azure resources that may incur costs."
-    read -p "Do you want to continue with the deployment? (y/N): " -n 1 -r
-    echo
+    print_status "Proceeding with deployment automatically..."
     
-    if [[ $REPLY =~ ^[Yy]$ ]]; then
-        # Apply deployment
-        apply_terraform
-        
-        # Save outputs
-        save_outputs
-        
-        # Configure Key Vault
-        configure_key_vault
-        
-        # Create sample data
-        create_sample_data
-        
-        print_success "Infrastructure deployment completed successfully!"
-        print_status "Next steps:"
-        print_status "1. Deploy Data Factory pipelines: ./deploy-adf-pipelines.sh"
-        print_status "2. Deploy Databricks notebooks: ./deploy-databricks-notebooks.sh"
-        print_status "3. Configure monitoring: ./setup-monitoring.sh"
-        
-    else
-        print_warning "Deployment cancelled by user"
-        exit 0
-    fi
+    # Apply deployment
+    apply_terraform
+    
+    # Save outputs
+    save_outputs
+    
+    # Configure Key Vault
+    configure_key_vault
+    
+    # Create sample data
+    create_sample_data
+    
+    print_success "Infrastructure deployment completed successfully!"
+    print_status "Next steps:"
+    print_status "1. Deploy Data Factory pipelines: ./deploy-adf-pipelines.sh"
+    print_status "2. Deploy Databricks notebooks: ./deploy-databricks-notebooks.sh"
+    print_status "3. Configure monitoring: ./setup-monitoring.sh"
 }
 
 # Run main function

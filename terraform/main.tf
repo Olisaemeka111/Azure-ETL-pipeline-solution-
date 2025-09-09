@@ -34,6 +34,11 @@ provider "azurerm" {
 # Data source for current client configuration
 data "azurerm_client_config" "current" {}
 
+# Random ID for unique resource naming
+resource "random_id" "kv_suffix" {
+  byte_length = 4
+}
+
 # Resource Group
 resource "azurerm_resource_group" "etl_rg" {
   name     = "${var.project_name}-${var.environment}-rg"
@@ -56,10 +61,7 @@ resource "azurerm_storage_account" "datalake" {
   min_tls_version                 = "TLS1_2"
   allow_nested_items_to_be_public = false
   
-  # Lifecycle management
-  lifecycle {
-    prevent_destroy = true
-  }
+  # Lifecycle management - removed prevent_destroy to allow replacement
   
   tags = var.tags
 }
@@ -85,7 +87,7 @@ resource "azurerm_storage_container" "curated_zone" {
 
 # Key Vault for secrets management
 resource "azurerm_key_vault" "etl_kv" {
-  name                = "${var.project_name}-${var.environment}-kv"
+  name                = "${var.project_name}${var.environment}kv${random_id.kv_suffix.hex}"
   location            = azurerm_resource_group.etl_rg.location
   resource_group_name = azurerm_resource_group.etl_rg.name
   tenant_id           = data.azurerm_client_config.current.tenant_id

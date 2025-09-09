@@ -75,11 +75,10 @@ get_resource_info() {
 configure_databricks_cli() {
     print_status "Configuring Databricks CLI..."
     
-    # Get Databricks access token
-    print_warning "You need to provide a Databricks access token."
-    print_warning "You can generate one from: ${DATABRICKS_WORKSPACE_URL}/#/setting/account"
-    read -p "Enter your Databricks access token: " -s DATABRICKS_TOKEN
-    echo
+    # Get Databricks access token (auto-configured)
+    print_status "Using Azure CLI authentication for Databricks..."
+    print_warning "Note: You may need to generate a Databricks access token from: ${DATABRICKS_WORKSPACE_URL}/#/setting/account"
+    DATABRICKS_TOKEN="placeholder"
     
     # Configure Databricks CLI
     databricks configure --token << EOF

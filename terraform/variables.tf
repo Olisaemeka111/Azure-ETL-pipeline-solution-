@@ -28,7 +28,7 @@ variable "location" {
   default     = "East US"
   
   validation {
-    condition     = can(regex("^[A-Za-z ]+$", var.location))
+    condition     = can(regex("^[A-Za-z0-9 ]+$", var.location))
     error_message = "Location must be a valid Azure region name."
   }
 }
